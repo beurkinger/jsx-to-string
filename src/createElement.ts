@@ -20,7 +20,7 @@ type ComponentChild =
 
 type ComponentChildren = ComponentChild | ComponentChild[];
 
-const VOID_ELEMENT_TAGS = [
+const VOID_ELEMENT_TAGS = new Set([
   'area',
   'base',
   'br',
@@ -35,7 +35,7 @@ const VOID_ELEMENT_TAGS = [
   'source',
   'track',
   'wbr',
-];
+]);
 
 export function h(
   type: string | Component | VNode,
@@ -47,21 +47,20 @@ export function h(
   children: ComponentChildren
 ): VNode {
   const nodeProps: Record<string, unknown> = {};
-  let nodeChildren = children;
 
   for (const i in props) {
     nodeProps[i] = props[i];
   }
 
   if (arguments.length > 3) {
-    nodeChildren = [nodeChildren] as ComponentChild[];
+    children = [children] as ComponentChild[];
     for (let i = 3; i < arguments.length; i++) {
-      nodeChildren.push(arguments[i]);
+      children.push(arguments[i]);
     }
   }
 
-  if (nodeChildren != null) {
-    nodeProps.children = nodeChildren;
+  if (children != null) {
+    nodeProps.children = children;
   }
 
   return createVNode(type, nodeProps);
@@ -84,7 +83,7 @@ export function render(node: ComponentChild): string {
     typeof node === 'number' ||
     typeof node === 'boolean'
   ) {
-    return node.toString();
+    return node + '';
   }
 
   if (!isVnode(node)) {
@@ -95,9 +94,9 @@ export function render(node: ComponentChild): string {
     return str;
   }
 
-  const props = (node as VNode).props;
+  const props = node.props as Props;
   const tagName = (node as VNode).type;
-  const isSelfClosing = !VOID_ELEMENT_TAGS.includes(tagName);
+  const isSelfClosing = !VOID_ELEMENT_TAGS.has(tagName);
   const children = props.children;
 
   let nodeContentStr = '';
@@ -144,5 +143,5 @@ const getAttribute = (name: string, value: unknown): string =>
 
 const convertToString = (n: unknown) =>
   typeof n === 'string' || typeof n === 'number' || typeof n === 'boolean'
-    ? n.toString()
+    ? n + ''
     : '';
