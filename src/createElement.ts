@@ -1,16 +1,16 @@
 import { JSXInternal } from './jsx';
 
-type Props = Record<string, unknown> & { children?: ComponentChildren };
-
-export interface VNode {
+type Props = Record<string, unknown>;
+interface Node {
   type: string;
   props: Props;
+  children: ComponentChildren;
 }
 
-export type Component = (props: Props) => VNode;
+export type Component = (props: Props) => Node;
 
 type ComponentChild =
-  | VNode
+  | Node
   | Record<string, unknown>
   | string
   | number
@@ -38,14 +38,14 @@ const VOID_ELEMENT_TAGS = new Set([
 ]);
 
 export function h(
-  type: string | Component | VNode,
+  type: string | Component | Node,
   props:
     | (JSXInternal.HTMLAttributes &
         JSXInternal.SVGAttributes &
         Record<string, unknown>)
     | null,
   children: ComponentChildren
-): VNode {
+): Node {
   const nodeProps: Record<string, unknown> = {};
 
   for (const i in props) {
@@ -59,19 +59,16 @@ export function h(
     }
   }
 
-  if (children != null) {
-    nodeProps.children = children;
-  }
-
-  return createVNode(type, nodeProps);
+  return createNode(type, nodeProps, children);
 }
 
-export function createVNode(
-  type: string | Component | VNode,
-  props: Props
-): VNode {
-  if (typeof type === 'string') return { type, props };
-  if (isVNode(type)) return type as VNode;
+export function createNode(
+  type: string | Component | Node,
+  props: Props,
+  children: ComponentChildren
+): Node {
+  if (typeof type === 'string') return { type, props, children };
+  if (isNode(type)) return type as Node;
   return (type as Component)(props);
 }
 
@@ -80,7 +77,7 @@ export function render(node: ComponentChildren): string {
   if (typeof node === 'string') return node;
   if (typeof node === 'number' || typeof node === 'boolean') return node + '';
 
-  if (Array.isArray(node) || !isVNode(node)) {
+  if (Array.isArray(node) || !isNode(node)) {
     let str = '';
     for (const i in node) {
       str += render(node[i]);
@@ -89,9 +86,9 @@ export function render(node: ComponentChildren): string {
   }
 
   const props = node.props as Props;
-  const tagName = (node as VNode).type;
+  const tagName = (node as Node).type;
   const isSelfClosing = VOID_ELEMENT_TAGS.has(tagName);
-  const children = props.children;
+  const children = node.children as ComponentChildren;
 
   const attributesStr = getAttributes(props);
   const nodeContentStr = render(children);
@@ -105,14 +102,14 @@ export function render(node: ComponentChildren): string {
   );
 }
 
-const isVNode = (x: VNode | Record<string, unknown> | string | Component) =>
+const isNode = (x: Node | Record<string, unknown> | string | Component) =>
   !!(x && typeof x === 'object' && x.type && x.props);
 
 const getAttributes = (props: Props): string => {
   let attrStr = '';
 
   for (const i in props) {
-    if (i !== 'children') attrStr += getAttribute(i, props[i]) + ' ';
+    attrStr += getAttribute(i, props[i]) + ' ';
   }
 
   return attrStr.trim();
